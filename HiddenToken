@@ -1,66 +1,140 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
 local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local UIListLayout = Instance.new("UIListLayout")
-local ScrollingFrame = Instance.new("ScrollingFrame")
-
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Name = "OptimizedMenu"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
+local MainFrame = Instance.new("Frame")
 MainFrame.Name = "ScriptMenu"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.5, 150, 0.5, -200) 
-MainFrame.Size = UDim2.new(0, 300, 0, 400)
+MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+MainFrame.Position = UDim2.new(0.5, 350, 0.5, -200)
+MainFrame.Size = UDim2.new(0, 150, 0, 445)
 MainFrame.Active = true
-MainFrame.Draggable = true
+MainFrame.Draggable = false
+MainFrame.Parent = ScreenGui
 
-ScrollingFrame.Parent = MainFrame
+local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Size = UDim2.new(1, -10, 1, -10)
 ScrollingFrame.Position = UDim2.new(0, 5, 0, 5)
 ScrollingFrame.BackgroundTransparency = 1
-ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-ScrollingFrame.ScrollBarThickness = 6
+ScrollingFrame.ScrollBarThickness = 4
+ScrollingFrame.Parent = MainFrame
 
-UIListLayout.Parent = ScrollingFrame
+local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 5)
+UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.Parent = ScrollingFrame
 
-local function createButton(name, scriptContent)
-    local TextButton = Instance.new("TextButton")
-    TextButton.Parent = ScrollingFrame
-    TextButton.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
-    TextButton.Size = UDim2.new(0, 280, 0, 40)
-    TextButton.Font = Enum.Font.SourceSansBold
-    TextButton.Text = name
-    TextButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TextButton.TextSize = 18
-    
-    TextButton.MouseButton1Click:Connect(function()
-        local success, err = pcall(function()
-            local func = loadstring(scriptContent)
-            if func then func() else warn("Failed to load script: " .. name) end
+UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 10)
+end)
+
+local SharedTools = {
+    Notify = function(titletxt, text, duration)
+        local NotifyGui = Instance.new("ScreenGui")
+        NotifyGui.Name = "Notification"
+        NotifyGui.Parent = CoreGui
+
+        local Main = Instance.new("Frame", NotifyGui)
+        Main.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        Main.Position = UDim2.new(1, 5, 0, 50)
+        Main.Size = UDim2.new(0, 250, 0, 80)
+
+        local title = Instance.new("TextLabel", Main)
+        title.Size = UDim2.new(1, 0, 0, 25)
+        title.Text = titletxt
+        title.TextColor3 = Color3.new(1,1,1)
+        title.BackgroundTransparency = 0.8
+
+        local msg = Instance.new("TextLabel", Main)
+        msg.Position = UDim2.new(0, 0, 0, 25)
+        msg.Size = UDim2.new(1, 0, 1, -25)
+        msg.Text = text
+        msg.TextColor3 = Color3.new(1,1,1)
+        msg.BackgroundTransparency = 1
+
+        Main:TweenPosition(UDim2.new(1, -260, 0, 50), "Out", "Quad", 0.4, true)
+        task.delay(duration, function()
+            if Main then
+                Main:TweenPosition(UDim2.new(1, 5, 0, 50), "In", "Quad", 0.4, true)
+                task.wait(0.5)
+                NotifyGui:Destroy()
+            end
         end)
-        if not success then
-            warn("Error running script " .. name .. ": " .. err)
+    end,
+
+    RunTeleport = function(targets)
+        local rise_info = TweenInfo.new(1, Enum.EasingStyle.Linear)
+        local move_info = TweenInfo.new(1, Enum.EasingStyle.Linear)
+        local bob_info = TweenInfo.new(0.2, Enum.EasingStyle.Linear)
+
+        for i, targetCF in ipairs(targets) do
+            local char = player.Character or player.CharacterAdded:Wait()
+            local hrp = char:WaitForChild("HumanoidRootPart")
+            local hum = char:WaitForChild("Humanoid")
+
+            local riseTween = TweenService:Create(hrp, rise_info, {CFrame = CFrame.new(hrp.Position.X, 500, hrp.Position.Z)})
+            riseTween:Play()
+            riseTween.Completed:Wait()
+
+            local moveTween = TweenService:Create(hrp, move_info, {CFrame = targetCF})
+            moveTween:Play()
+            moveTween.Completed:Wait()
+
+            for _ = 1, 4 do
+                local up = TweenService:Create(hrp, bob_info, {CFrame = hrp.CFrame * CFrame.new(0, 1, 0)})
+                up:Play()
+                up.Completed:Wait()
+
+                local down = TweenService:Create(hrp, bob_info, {CFrame = hrp.CFrame * CFrame.new(0, -1, 0)})
+                down:Play()
+                down.Completed:Wait()
+            end
+
+            if i < #targets then
+                hum.Health = 0
+                player.CharacterAdded:Wait()
+                task.wait(0.5)
+            end
         end
+    end
+}
+
+local scriptData = {
+    ["Ticket1"] = {CFrame.new(42,149,-531), CFrame.new(83.94,68.01,-142.12), CFrame.new(87.2,55.8,396.9), CFrame.new(-54,20,-62.5), CFrame.new(-232.7,185.5,-250.1), CFrame.new(-374.8,17.1,492.7), CFrame.new(-168.6,34.3,77.4)},
+    ["Ticket2"] = {CFrame.new(-123.5,72,557.9), CFrame.new(4.8,175.9,-96.2), CFrame.new(129.6,118.5,-64.1), CFrame.new(98.8,35,355.7), CFrame.new(13.7,3.9,68.2), CFrame.new(-43.3,195.3,-263.1), CFrame.new(338.7,131.8,-233.6)},
+    ["5StarJelly"] = {CFrame.new(272.7,25292.5,-872.4), CFrame.new(-435.8,93.2,49.3), CFrame.new(-481.3,69.3,0.1), CFrame.new(523.7,149.9,-410.9), CFrame.new(-412.4,17.1,465.6)},
+    ["Other1"] = {CFrame.new(301.2,25282.6,-807.4), CFrame.new(-335.8,132.3,-384.0), CFrame.new(48.7,32.2,705.0), CFrame.new(272.6,96.9,457.7), CFrame.new(-365.7,17.1,464.3)},
+    ["Other2"] = {CFrame.new(-114.7,72,558), CFrame.new(-105.1,72,557.5), CFrame.new(226.8,25252.2,-716.2), CFrame.new(175.9,68.9,-223.7), CFrame.new(368.8,84.9,-238.0)},
+    ["Other3"] = {CFrame.new(500.1,178.1,-418.0), CFrame.new(599.7,178.1,-435.9), CFrame.new(-468.8,100.9,173.0), CFrame.new(-310.8,115.2,478.1)},
+    ["RoyalJelly1"] = {CFrame.new(-63.8,37.3,113.0), CFrame.new(110.3,64.6,-60.0), CFrame.new(218.6,34.4,-29.7), CFrame.new(314.5,62.5,213.7), CFrame.new(139.7,65.1,258.3), CFrame.new(-292.4,50.2,265.1)},
+    ["RoyalJelly2"] = {CFrame.new(-189.2,65.1,367.3), CFrame.new(-356.4,128.2,-227.3), CFrame.new(265.1,57.8,109.4), CFrame.new(-383.8,55.4,81.5), CFrame.new(5.6,229.6,-168.1), CFrame.new(146.8,36.9,266.4)},
+    ["RoyalJelly3"] = {CFrame.new(-123.4,67.9,-218.7), CFrame.new(88.8,310.4,-295.0), CFrame.new(517.3,178.1,-290.9), CFrame.new(-231.8,43.9,418.9), CFrame.new(142.9,68.9,-216.0)}
+}
+
+local function createButton(name, targetData)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 270, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.Text = name
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 16
+    btn.Parent = ScrollingFrame
+
+    btn.MouseButton1Click:Connect(function()
+        SharedTools.Notify("Manager", "Executing " .. name, 2)
+        task.spawn(function()
+            SharedTools.RunTeleport(targetData)
+        end)
     end)
 end
 
-local scripts = {
-    ["Ticket1"] = [[function Notify(titletxt,text,time)local GUI=Instance.new("ScreenGui")local Main=Instance.new("Frame",GUI)local title=Instance.new("TextLabel",Main)local message=Instance.new("TextLabel",Main)GUI.Name="NotificationOof"GUI.Parent=game.CoreGui Main.Name="MainFrame"Main.BackgroundColor3=Color3.new(0.156863,0.156863,0.156863)Main.BorderSizePixel=0 Main.Position=UDim2.new(1,5,0,50)Main.Size=UDim2.new(0,330,0,100)title.BackgroundColor3=Color3.new(0,0,0)title.BackgroundTransparency=0.89999997615814 title.Size=UDim2.new(1,0,0,30)title.Font=Enum.Font.SourceSansSemibold title.Text=titletxt title.TextColor3=Color3.new(1,1,1)title.TextSize=17 message.BackgroundColor3=Color3.new(0,0,0)message.BackgroundTransparency=1 message.Position=UDim2.new(0,0,0,30)message.Size=UDim2.new(1,0,1,-30)message.Font=Enum.Font.SourceSans message.Text=text message.TextColor3=Color3.new(1,1,1)message.TextSize=16 wait(0.1)Main:TweenPosition(UDim2.new(1,-330,0,50),"Out","Sine",0.5)wait(time)Main:TweenPosition(UDim2.new(1,5,0,50),"Out","Sine",0.5)wait(0.6)GUI:Destroy()end Notify("Hi","starting!!!!!",5)wait(0.5)local player=game.Players.LocalPlayer local ts=game:GetService("TweenService")local starterGui=game:GetService("StarterGui")local rise_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local move_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local bob_info=TweenInfo.new(0.2,Enum.EasingStyle.Linear)local targets={CFrame.new(42,149,-531),CFrame.new(83.94,68.01,-142.12),CFrame.new(87.2009048461914,55.82689666748047,396.9039306640625),CFrame.new(-54.01146697998047,19.998023986816406,-62.59174728393555),CFrame.new(-232.7189483642578,185.57078552246094,-250.191162109375),CFrame.new(-374.81134033203125,17.16798210144043,492.79278564453125),CFrame.new(-168.64706420898438,34.303775787353516,77.43510437011719)}local index=1 local BOB_DURATION=2 while index<=#targets do local character=player.Character or player.CharacterAdded:Wait()local hrp=character:WaitForChild("HumanoidRootPart")local humanoid=character:WaitForChild("Humanoid")local pos=hrp.Position local rise_target=CFrame.new(pos.X,500,pos.Z)local rise_tween=ts:Create(hrp,rise_info,{CFrame=rise_target})rise_tween:Play()rise_tween.Completed:Wait()local target=targets[index]local move_tween=ts:Create(hrp,move_info,{CFrame=target})move_tween:Play()move_tween.Completed:Wait()local startTime=os.clock()while os.clock()-startTime<BOB_DURATION do local p=hrp.Position local up=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y+1,p.Z)})up:Play()up.Completed:Wait()p=hrp.Position local down=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y-1,p.Z)})down:Play()down.Completed:Wait()end index+=1 if index<=#targets then humanoid.Health=0 player.CharacterAdded:Wait()end end]],
-    ["ticket2"] = [[function Notify(titletxt,text,time)local GUI=Instance.new("ScreenGui")local Main=Instance.new("Frame",GUI)local title=Instance.new("TextLabel",Main)local message=Instance.new("TextLabel",Main)GUI.Name="NotificationOof"GUI.Parent=game.CoreGui Main.Name="MainFrame"Main.BackgroundColor3=Color3.new(0.156863,0.156863,0.156863)Main.BorderSizePixel=0 Main.Position=UDim2.new(1,5,0,50)Main.Size=UDim2.new(0,330,0,100)title.BackgroundColor3=Color3.new(0,0,0)title.BackgroundTransparency=0.89999997615814 title.Size=UDim2.new(1,0,0,30)title.Font=Enum.Font.SourceSansSemibold title.Text=titletxt title.TextColor3=Color3.new(1,1,1)title.TextSize=17 message.BackgroundColor3=Color3.new(0,0,0)message.BackgroundTransparency=1 message.Position=UDim2.new(0,0,0,30)message.Size=UDim2.new(1,0,1,-30)message.Font=Enum.Font.SourceSans message.Text=text message.TextColor3=Color3.new(1,1,1)message.TextSize=16 wait(0.1)Main:TweenPosition(UDim2.new(1,-330,0,50),"Out","Sine",0.5)wait(time)Main:TweenPosition(UDim2.new(1,5,0,50),"Out","Sine",0.5)wait(0.6)GUI:Destroy()end Notify("Hi","starting!!!!!",5)wait(0.5)local player=game.Players.LocalPlayer local ts=game:GetService("TweenService")local starterGui=game:GetService("StarterGui")local rise_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local move_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local bob_info=TweenInfo.new(0.2,Enum.EasingStyle.Linear)local targets={CFrame.new(-123.56758117675781,72.02799224853516,557.9815063476562),CFrame.new(4.831763744354248,175.99801635742188,-96.23686218261719),CFrame.new(129.67276000976562,118.59697723388672,-64.14144897460938),CFrame.new(98.8785400390625,35.02528762817383,355.7325134277344),CFrame.new(13.782668113708496,3.9971814155578613,68.21932983398438),CFrame.new(-43.37383270263672,195.33460998535156,-263.1496276855469),CFrame.new(338.70703125,131.85960388183594,-233.6902313232422)}local index=1 local BOB_DURATION=2 while index<=#targets do local character=player.Character or player.CharacterAdded:Wait()local hrp=character:WaitForChild("HumanoidRootPart")local humanoid=character:WaitForChild("Humanoid")local pos=hrp.Position local rise_target=CFrame.new(pos.X,500,pos.Z)local rise_tween=ts:Create(hrp,rise_info,{CFrame=rise_target})rise_tween:Play()rise_tween.Completed:Wait()local target=targets[index]local move_tween=ts:Create(hrp,move_info,{CFrame=target})move_tween:Play()move_tween.Completed:Wait()local startTime=os.clock()while os.clock()-startTime<BOB_DURATION do local p=hrp.Position local up=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y+1,p.Z)})up:Play()up.Completed:Wait()p=hrp.Position local down=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y-1,p.Z)})down:Play()down.Completed:Wait()end index+=1 if index<=#targets then humanoid.Health=0 player.CharacterAdded:Wait()end end]],
-    ["5StarJelly"] = [[function Notify(titletxt,text,time)local GUI=Instance.new("ScreenGui")local Main=Instance.new("Frame",GUI)local title=Instance.new("TextLabel",Main)local message=Instance.new("TextLabel",Main)GUI.Name="NotificationOof"GUI.Parent=game.CoreGui Main.Name="MainFrame"Main.BackgroundColor3=Color3.new(0.156863,0.156863,0.156863)Main.BorderSizePixel=0 Main.Position=UDim2.new(1,5,0,50)Main.Size=UDim2.new(0,330,0,100)title.BackgroundColor3=Color3.new(0,0,0)title.BackgroundTransparency=0.89999997615814 title.Size=UDim2.new(1,0,0,30)title.Font=Enum.Font.SourceSansSemibold title.Text=titletxt title.TextColor3=Color3.new(1,1,1)title.TextSize=17 message.BackgroundColor3=Color3.new(0,0,0)message.BackgroundTransparency=1 message.Position=UDim2.new(0,0,0,30)message.Size=UDim2.new(1,0,1,-30)message.Font=Enum.Font.SourceSans message.Text=text message.TextColor3=Color3.new(1,1,1)message.TextSize=16 wait(0.1)Main:TweenPosition(UDim2.new(1,-330,0,50),"Out","Sine",0.5)wait(time)Main:TweenPosition(UDim2.new(1,5,0,50),"Out","Sine",0.5)wait(0.6)GUI:Destroy()end Notify("Hi","starting!!!!!",5)wait(0.5)local player=game.Players.LocalPlayer local ts=game:GetService("TweenService")local starterGui=game:GetService("StarterGui")local rise_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local move_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local bob_info=TweenInfo.new(0.2,Enum.EasingStyle.Linear)local targets={CFrame.new(272.7856750488281,25292.5625,-872.4583740234375),CFrame.new(-435.8757019042969,93.25759887695312,49.36785888671875),CFrame.new(-481.3213195800781,69.38681030273438,0.11363307386636734),CFrame.new(523.736083984375,149.94583129882812,-410.9504089355469),CFrame.new(-412.469970703125,17.16798210144043,465.6084289550781)}local index=1 local BOB_DURATION=2 while index<=#targets do local character=player.Character or player.CharacterAdded:Wait()local hrp=character:WaitForChild("HumanoidRootPart")local humanoid=character:WaitForChild("Humanoid")local pos=hrp.Position local rise_target=CFrame.new(pos.X,500,pos.Z)local rise_tween=ts:Create(hrp,rise_info,{CFrame=rise_target})rise_tween:Play()rise_tween.Completed:Wait()local target=targets[index]local move_tween=ts:Create(hrp,move_info,{CFrame=target})move_tween:Play()move_tween.Completed:Wait()local startTime=os.clock()while os.clock()-startTime<BOB_DURATION do local p=hrp.Position local up=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y+1,p.Z)})up:Play()up.Completed:Wait()p=hrp.Position local down=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y-1,p.Z)})down:Play()down.Completed:Wait()end index+=1 if index<=#targets then humanoid.Health=0 player.CharacterAdded:Wait()end end]],
-    ["other1"] = [[function Notify(titletxt,text,time)local GUI=Instance.new("ScreenGui")local Main=Instance.new("Frame",GUI)local title=Instance.new("TextLabel",Main)local message=Instance.new("TextLabel",Main)GUI.Name="NotificationOof"GUI.Parent=game.CoreGui Main.Name="MainFrame"Main.BackgroundColor3=Color3.new(0.156863,0.156863,0.156863)Main.BorderSizePixel=0 Main.Position=UDim2.new(1,5,0,50)Main.Size=UDim2.new(0,330,0,100)title.BackgroundColor3=Color3.new(0,0,0)title.BackgroundTransparency=0.89999997615814 title.Size=UDim2.new(1,0,0,30)title.Font=Enum.Font.SourceSansSemibold title.Text=titletxt title.TextColor3=Color3.new(1,1,1)title.TextSize=17 message.BackgroundColor3=Color3.new(0,0,0)message.BackgroundTransparency=1 message.Position=UDim2.new(0,0,0,30)message.Size=UDim2.new(1,0,1,-30)message.Font=Enum.Font.SourceSans message.Text=text message.TextColor3=Color3.new(1,1,1)message.TextSize=16 wait(0.1)Main:TweenPosition(UDim2.new(1,-330,0,50),"Out","Sine",0.5)wait(time)Main:TweenPosition(UDim2.new(1,5,0,50),"Out","Sine",0.5)wait(0.6)GUI:Destroy()end Notify("Hi","starting!!!!!",5)wait(0.5)local player=game.Players.LocalPlayer local ts=game:GetService("TweenService")local starterGui=game:GetService("StarterGui")local rise_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local move_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local bob_info=TweenInfo.new(0.2,Enum.EasingStyle.Linear)local targets={CFrame.new(301.2729187011719,25282.6015625,-807.44384765625),CFrame.new(-335.8774108886719,132.3268280029297,-384.0262756347656),CFrame.new(48.772071838378906,32.26803207397461,705.0418701171875),CFrame.new(272.6705627441406,96.95042419433594,457.7461242675781),CFrame.new(-365.70416259765625,17.16798210144043,464.303466796875)}local index=1 local BOB_DURATION=2 while index<=#targets do local character=player.Character or player.CharacterAdded:Wait()local hrp=character:WaitForChild("HumanoidRootPart")local humanoid=character:WaitForChild("Humanoid")local pos=hrp.Position local rise_target=CFrame.new(pos.X,500,pos.Z)local rise_tween=ts:Create(hrp,rise_info,{CFrame=rise_target})rise_tween:Play()rise_tween.Completed:Wait()local target=targets[index]local move_tween=ts:Create(hrp,move_info,{CFrame=target})move_tween:Play()move_tween.Completed:Wait()local startTime=os.clock()while os.clock()-startTime<BOB_DURATION do local p=hrp.Position local up=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y+1,p.Z)})up:Play()up.Completed:Wait()p=hrp.Position local down=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y-1,p.Z)})down:Play()down.Completed:Wait()end index+=1 if index<=#targets then humanoid.Health=0 player.CharacterAdded:Wait()end end]],
-    ["other2"] = [[function Notify(titletxt,text,time)local GUI=Instance.new("ScreenGui")local Main=Instance.new("Frame",GUI)local title=Instance.new("TextLabel",Main)local message=Instance.new("TextLabel",Main)GUI.Name="NotificationOof"GUI.Parent=game.CoreGui Main.Name="MainFrame"Main.BackgroundColor3=Color3.new(0.156863,0.156863,0.156863)Main.BorderSizePixel=0 Main.Position=UDim2.new(1,5,0,50)Main.Size=UDim2.new(0,330,0,100)title.BackgroundColor3=Color3.new(0,0,0)title.BackgroundTransparency=0.89999997615814 title.Size=UDim2.new(1,0,0,30)title.Font=Enum.Font.SourceSansSemibold title.Text=titletxt title.TextColor3=Color3.new(1,1,1)title.TextSize=17 message.BackgroundColor3=Color3.new(0,0,0)message.BackgroundTransparency=1 message.Position=UDim2.new(0,0,0,30)message.Size=UDim2.new(1,0,1,-30)message.Font=Enum.Font.SourceSans message.Text=text message.TextColor3=Color3.new(1,1,1)message.TextSize=16 wait(0.1)Main:TweenPosition(UDim2.new(1,-330,0,50),"Out","Sine",0.5)wait(time)Main:TweenPosition(UDim2.new(1,5,0,50),"Out","Sine",0.5)wait(0.6)GUI:Destroy()end Notify("Hi","starting!!!!!",5)wait(0.5)local player=game.Players.LocalPlayer local ts=game:GetService("TweenService")local starterGui=game:GetService("StarterGui")local rise_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local move_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local bob_info=TweenInfo.new(0.2,Enum.EasingStyle.Linear)local targets={CFrame.new(-114.74723815917969,72.02799224853516,558.0609130859375),CFrame.new(-105.11966705322266,72.02799224853516,557.5563354492188),CFrame.new(226.86790466308594,25252.263671875,-716.2445068359375),CFrame.new(175.98390197753906,68.99801635742188,-223.7980194091797),CFrame.new(368.8648681640625,84.99801635742188,-238.08078002929688)}local index=1 local BOB_DURATION=2 while index<=#targets do local character=player.Character or player.CharacterAdded:Wait()local hrp=character:WaitForChild("HumanoidRootPart")local humanoid=character:WaitForChild("Humanoid")local pos=hrp.Position local rise_target=CFrame.new(pos.X,500,pos.Z)local rise_tween=ts:Create(hrp,rise_info,{CFrame=rise_target})rise_tween:Play()rise_tween.Completed:Wait()local target=targets[index]local move_tween=ts:Create(hrp,move_info,{CFrame=target})move_tween:Play()move_tween.Completed:Wait()local startTime=os.clock()while os.clock()-startTime<BOB_DURATION do local p=hrp.Position local up=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y+1,p.Z)})up:Play()up.Completed:Wait()p=hrp.Position local down=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y-1,p.Z)})down:Play()down.Completed:Wait()end index+=1 if index<=#targets then humanoid.Health=0 player.CharacterAdded:Wait()end end]],
-    ["other3"] = [[function Notify(titletxt,text,time)local GUI=Instance.new("ScreenGui")local Main=Instance.new("Frame",GUI)local title=Instance.new("TextLabel",Main)local message=Instance.new("TextLabel",Main)GUI.Name="NotificationOof"GUI.Parent=game.CoreGui Main.Name="MainFrame"Main.BackgroundColor3=Color3.new(0.156863,0.156863,0.156863)Main.BorderSizePixel=0 Main.Position=UDim2.new(1,5,0,50)Main.Size=UDim2.new(0,330,0,100)title.BackgroundColor3=Color3.new(0,0,0)title.BackgroundTransparency=0.89999997615814 title.Size=UDim2.new(1,0,0,30)title.Font=Enum.Font.SourceSansSemibold title.Text=titletxt title.TextColor3=Color3.new(1,1,1)title.TextSize=17 message.BackgroundColor3=Color3.new(0,0,0)message.BackgroundTransparency=1 message.Position=UDim2.new(0,0,0,30)message.Size=UDim2.new(1,0,1,-30)message.Font=Enum.Font.SourceSans message.Text=text message.TextColor3=Color3.new(1,1,1)message.TextSize=16 wait(0.1)Main:TweenPosition(UDim2.new(1,-330,0,50),"Out","Sine",0.5)wait(time)Main:TweenPosition(UDim2.new(1,5,0,50),"Out","Sine",0.5)wait(0.6)GUI:Destroy()end Notify("Hi","starting!!!!!",5)wait(0.5)local player=game.Players.LocalPlayer local ts=game:GetService("TweenService")local starterGui=game:GetService("StarterGui")local rise_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local move_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local bob_info=TweenInfo.new(0.2,Enum.EasingStyle.Linear)local targets={CFrame.new(500.13665771484375,178.12571716308594,-418.097900390625),CFrame.new(599.7518310546875,178.12535095214844,-435.9890441894531),CFrame.new(-468.89508056640625,100.96221160888672,173.0914764404297),CFrame.new(-310.869140625,115.2011489868164,478.18829345703125)}local index=1 local BOB_DURATION=2 while index<=#targets do local character=player.Character or player.CharacterAdded:Wait()local hrp=character:WaitForChild("HumanoidRootPart")local humanoid=character:WaitForChild("Humanoid")local pos=hrp.Position local rise_target=CFrame.new(pos.X,500,pos.Z)local rise_tween=ts:Create(hrp,rise_info,{CFrame=rise_target})rise_tween:Play()rise_tween.Completed:Wait()local target=targets[index]local move_tween=ts:Create(hrp,move_info,{CFrame=target})move_tween:Play()move_tween.Completed:Wait()local startTime=os.clock()while os.clock()-startTime<BOB_DURATION do local p=hrp.Position local up=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y+1,p.Z)})up:Play()up.Completed:Wait()p=hrp.Position local down=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y-1,p.Z)})down:Play()down.Completed:Wait()end index+=1 if index<=#targets then humanoid.Health=0 player.CharacterAdded:Wait()end end]],
-    ["royaljelly1"] = [[function Notify(titletxt,text,time)local GUI=Instance.new("ScreenGui")local Main=Instance.new("Frame",GUI)local title=Instance.new("TextLabel",Main)local message=Instance.new("TextLabel",Main)GUI.Name="NotificationOof"GUI.Parent=game.CoreGui Main.Name="MainFrame"Main.BackgroundColor3=Color3.new(0.156863,0.156863,0.156863)Main.BorderSizePixel=0 Main.Position=UDim2.new(1,5,0,50)Main.Size=UDim2.new(0,330,0,100)title.BackgroundColor3=Color3.new(0,0,0)title.BackgroundTransparency=0.89999997615814 title.Size=UDim2.new(1,0,0,30)title.Font=Enum.Font.SourceSansSemibold title.Text=titletxt title.TextColor3=Color3.new(1,1,1)title.TextSize=17 message.BackgroundColor3=Color3.new(0,0,0)message.BackgroundTransparency=1 message.Position=UDim2.new(0,0,0,30)message.Size=UDim2.new(1,0,1,-30)message.Font=Enum.Font.SourceSans message.Text=text message.TextColor3=Color3.new(1,1,1)message.TextSize=16 wait(0.1)Main:TweenPosition(UDim2.new(1,-330,0,50),"Out","Sine",0.5)wait(time)Main:TweenPosition(UDim2.new(1,5,0,50),"Out","Sine",0.5)wait(0.6)GUI:Destroy()end Notify("Hi","starting!!!!!",5)wait(0.5)local player=game.Players.LocalPlayer local ts=game:GetService("TweenService")local starterGui=game:GetService("StarterGui")local rise_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local move_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local bob_info=TweenInfo.new(0.2,Enum.EasingStyle.Linear)local targets={CFrame.new(-63.87173843383789,37.33784103393555,113.01036834716797),CFrame.new(110.30675506591797,64.627197265625,-60.016693115234375),CFrame.new(218.69100952148438,34.42803955078125,-29.79030418395996),CFrame.new(314.5038146972656,62.53620910644531,213.79779052734375),CFrame.new(139.73423767089844,65.12592315673828,258.3554992675781),CFrame.new(-292.4543762207031,50.2382698059082,265.107666015625)}local index=1 local BOB_DURATION=2 while index<=#targets do local character=player.Character or player.CharacterAdded:Wait()local hrp=character:WaitForChild("HumanoidRootPart")local humanoid=character:WaitForChild("Humanoid")local pos=hrp.Position local rise_target=CFrame.new(pos.X,500,pos.Z)local rise_tween=ts:Create(hrp,rise_info,{CFrame=rise_target})rise_tween:Play()rise_tween.Completed:Wait()local target=targets[index]local move_tween=ts:Create(hrp,move_info,{CFrame=target})move_tween:Play()move_tween.Completed:Wait()local startTime=os.clock()while os.clock()-startTime<BOB_DURATION do local p=hrp.Position local up=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y+1,p.Z)})up:Play()up.Completed:Wait()p=hrp.Position local down=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y-1,p.Z)})down:Play()down.Completed:Wait()end index+=1 if index<=#targets then humanoid.Health=0 player.CharacterAdded:Wait()end end]],
-    ["royaljelly2"] = [[function Notify(titletxt,text,time)local GUI=Instance.new("ScreenGui")local Main=Instance.new("Frame",GUI)local title=Instance.new("TextLabel",Main)local message=Instance.new("TextLabel",Main)GUI.Name="NotificationOof"GUI.Parent=game.CoreGui Main.Name="MainFrame"Main.BackgroundColor3=Color3.new(0.156863,0.156863,0.156863)Main.BorderSizePixel=0 Main.Position=UDim2.new(1,5,0,50)Main.Size=UDim2.new(0,330,0,100)title.BackgroundColor3=Color3.new(0,0,0)title.BackgroundTransparency=0.89999997615814 title.Size=UDim2.new(1,0,0,30)title.Font=Enum.Font.SourceSansSemibold title.Text=titletxt title.TextColor3=Color3.new(1,1,1)title.TextSize=17 message.BackgroundColor3=Color3.new(0,0,0)message.BackgroundTransparency=1 message.Position=UDim2.new(0,0,0,30)message.Size=UDim2.new(1,0,1,-30)message.Font=Enum.Font.SourceSans message.Text=text message.TextColor3=Color3.new(1,1,1)message.TextSize=16 wait(0.1)Main:TweenPosition(UDim2.new(1,-330,0,50),"Out","Sine",0.5)wait(time)Main:TweenPosition(UDim2.new(1,5,0,50),"Out","Sine",0.5)wait(0.6)GUI:Destroy()end Notify("Hi","starting!!!!!",5)wait(0.5)local player=game.Players.LocalPlayer local ts=game:GetService("TweenService")local starterGui=game:GetService("StarterGui")local rise_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local move_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local bob_info=TweenInfo.new(0.2,Enum.EasingStyle.Linear)local targets={CFrame.new(-189.22283935546875,65.17800903320312,367.3701171875),CFrame.new(-356.4808044433594,128.2709503173828,-227.37237548828125),CFrame.new(265.1246643066406,57.82622146606445,109.41056823730469),CFrame.new(-383.8005676269531,55.48857116699219,81.53691864013672),CFrame.new(5.6324005126953125,229.6869659423828,-168.17506408691406),CFrame.new(146.82167053222656,36.965274810791016,266.4189453125)}local index=1 local BOB_DURATION=2 while index<=#targets do local character=player.Character or player.CharacterAdded:Wait()local hrp=character:WaitForChild("HumanoidRootPart")local humanoid=character:WaitForChild("Humanoid")local pos=hrp.Position local rise_target=CFrame.new(pos.X,500,pos.Z)local rise_tween=ts:Create(hrp,rise_info,{CFrame=rise_target})rise_tween:Play()rise_tween.Completed:Wait()local target=targets[index]local move_tween=ts:Create(hrp,move_info,{CFrame=target})move_tween:Play()move_tween.Completed:Wait()local startTime=os.clock()while os.clock()-startTime<BOB_DURATION do local p=hrp.Position local up=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y+1,p.Z)})up:Play()up.Completed:Wait()p=hrp.Position local down=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y-1,p.Z)})down:Play()down.Completed:Wait()end index+=1 if index<=#targets then humanoid.Health=0 player.CharacterAdded:Wait()end end]],
-    ["royaljelly3"] = [[function Notify(titletxt,text,time)local GUI=Instance.new("ScreenGui")local Main=Instance.new("Frame",GUI)local title=Instance.new("TextLabel",Main)local message=Instance.new("TextLabel",Main)GUI.Name="NotificationOof"GUI.Parent=game.CoreGui Main.Name="MainFrame"Main.BackgroundColor3=Color3.new(0.156863,0.156863,0.156863)Main.BorderSizePixel=0 Main.Position=UDim2.new(1,5,0,50)Main.Size=UDim2.new(0,330,0,100)title.BackgroundColor3=Color3.new(0,0,0)title.BackgroundTransparency=0.89999997615814 title.Size=UDim2.new(1,0,0,30)title.Font=Enum.Font.SourceSansSemibold title.Text=titletxt title.TextColor3=Color3.new(1,1,1)title.TextSize=17 message.BackgroundColor3=Color3.new(0,0,0)message.BackgroundTransparency=1 message.Position=UDim2.new(0,0,0,30)message.Size=UDim2.new(1,0,1,-30)message.Font=Enum.Font.SourceSans message.Text=text message.TextColor3=Color3.new(1,1,1)message.TextSize=16 wait(0.1)Main:TweenPosition(UDim2.new(1,-330,0,50),"Out","Sine",0.5)wait(time)Main:TweenPosition(UDim2.new(1,5,0,50),"Out","Sine",0.5)wait(0.6)GUI:Destroy()end Notify("Hi","starting!!!!!",5)wait(0.5)local player=game.Players.LocalPlayer local ts=game:GetService("TweenService")local starterGui=game:GetService("StarterGui")local rise_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local move_info=TweenInfo.new(1,Enum.EasingStyle.Linear)local bob_info=TweenInfo.new(0.2,Enum.EasingStyle.Linear)local targets={CFrame.new(-123.4429931640625,67.9980239868164,-218.7329864501953),CFrame.new(88.82296752929688,310.43609619140625,-295.01470947265625),CFrame.new(517.3292846679688,178.1258087158203,-290.9737854003906),CFrame.new(-231.8800048828125,43.997344970703125,418.9036560058594),CFrame.new(142.96212768554688,68.99801635742188,-216.01593017578125)}local index=1 local BOB_DURATION=2 while index<=#targets do local character=player.Character or player.CharacterAdded:Wait()local hrp=character:WaitForChild("HumanoidRootPart")local humanoid=character:WaitForChild("Humanoid")local pos=hrp.Position local rise_target=CFrame.new(pos.X,500,pos.Z)local rise_tween=ts:Create(hrp,rise_info,{CFrame=rise_target})rise_tween:Play()rise_tween.Completed:Wait()local target=targets[index]local move_tween=ts:Create(hrp,move_info,{CFrame=target})move_tween:Play()move_tween.Completed:Wait()local startTime=os.clock()while os.clock()-startTime<BOB_DURATION do local p=hrp.Position local up=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y+1,p.Z)})up:Play()up.Completed:Wait()p=hrp.Position local down=ts:Create(hrp,bob_info,{CFrame=CFrame.new(p.X,p.Y-1,p.Z)})down:Play()down.Completed:Wait()end index+=1 if index<=#targets then humanoid.Health=0 player.CharacterAdded:Wait()end end]]
-}
-for name, content in pairs(scripts) do
-    createButton(name, content)
+for name, coords in pairs(scriptData) do
+    createButton(name, coords)
 end
-
-ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
