@@ -64,7 +64,6 @@ local SharedTools = {
         task.delay(duration, function()
             if Main then
                 Main:TweenPosition(UDim2.new(1, 5, 0, 50), "In", "Quad", 0.4, true)
-                task.wait(0.5)
                 NotifyGui:Destroy()
             end
         end)
@@ -88,7 +87,7 @@ local SharedTools = {
             moveTween:Play()
             moveTween.Completed:Wait()
 
-            for _ = 1, 8 do
+            for _ = 1, 9 do
                 local up = TweenService:Create(hrp, bob_info, {CFrame = hrp.CFrame * CFrame.new(0, 1, 0)})
                 up:Play()
                 up.Completed:Wait()
@@ -101,7 +100,6 @@ local SharedTools = {
             if i < #targets then
                 hum.Health = 0
                 player.CharacterAdded:Wait()
-                task.wait(0.5)
             end
         end
     end
