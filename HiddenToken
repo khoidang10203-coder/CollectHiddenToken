@@ -1,3 +1,5 @@
+--Script make by chatgpt(goat frfr)
+--Wait 30 seconds each time you press each button for it to work!
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -11,8 +13,8 @@ ScreenGui.Parent = player:WaitForChild("PlayerGui")
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "ScriptMenu"
 MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-MainFrame.Position = UDim2.new(0.5, 350, 0.5, -200)
-MainFrame.Size = UDim2.new(0, 150, 0, 445)
+MainFrame.Position = UDim2.new(0.5, 370, 0.35, -200)
+MainFrame.Size = UDim2.new(0, 150, 0, 540)
 MainFrame.Active = true
 MainFrame.Draggable = false
 MainFrame.Parent = ScreenGui
@@ -138,8 +140,8 @@ local function createButton(name, targetData)
 end
 local order = {
     "Ticket1", "Ticket2", "Ticket3",
-    "RoyalJelly1", "RoyalJelly2", "RoyalJelly3", "RoyalJelly4",
-    "5StarJelly",
+    "5StarJelly", "RoyalJelly1", "RoyalJelly2", "RoyalJelly3",
+    "RoyalJelly4",
     "Other1", "Other2", "Other3"
 }
 
