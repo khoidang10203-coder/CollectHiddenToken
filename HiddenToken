@@ -88,7 +88,7 @@ local SharedTools = {
             moveTween:Play()
             moveTween.Completed:Wait()
 
-            for _ = 1, 4 do
+            for _ = 1, 15 do
                 local up = TweenService:Create(hrp, bob_info, {CFrame = hrp.CFrame * CFrame.new(0, 1, 0)})
                 up:Play()
                 up.Completed:Wait()
