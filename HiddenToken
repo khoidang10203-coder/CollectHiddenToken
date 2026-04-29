@@ -1,4 +1,4 @@
---Main thing you get : 48 ticket, 19 royal jelly, 5 star jelly, diamond egg, gold egg, 2 glitter, 3 enzyme, 1 glue
+--48 ticket, 19 royal jelly, 5 star jelly, diamond egg, gold egg, 2 glitter, 3 enzyme, 1 glue
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -12,8 +12,8 @@ ScreenGui.Parent = player:WaitForChild("PlayerGui")
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "ScriptMenu"
 MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-MainFrame.Position = UDim2.new(0.5, 370, 0.35, -200)
-MainFrame.Size = UDim2.new(0, 150, 0, 570)
+MainFrame.Position = UDim2.new(0.5, 370, 0.30, -200)
+MainFrame.Size = UDim2.new(0, 150, 0, 588)
 MainFrame.Active = true
 MainFrame.Draggable = false
 MainFrame.Parent = ScreenGui
